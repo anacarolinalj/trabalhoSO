@@ -14,11 +14,11 @@ public:
 	Memoria();
 	virtual ~Memoria();
 
-	/*
-    //
-	*/
-
+	// Aloca um bloco de memória contíguo
+    // Retorna a posição inicial do bloco alocado(iniciando em 0), ou -1 se não foi possível alocar
 	int alocaBloco(int id, TipoProcesso tipo, int tamanho);
+
+	// Libera o bloco de memória alocado para um processo
 	void liberaBloco(int id);
 
 private:

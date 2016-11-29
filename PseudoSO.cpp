@@ -1,6 +1,7 @@
 #include "PseudoSO.h"
 #include "Processo.h"
 #include "Memoria.h"
+#include "Recurso.h"
 #include <iostream>
 #include <fstream>
 #include <istream>
@@ -17,12 +18,10 @@ void imprimirProcesso (Processo processo);
 void imprimirProcessos(std::list<Processo> processos);
 
 
-int main(int argc, const char *argv[]) {
-	string nomeArq;
-	ifstream arquivo;
-	std::list<Processo> processos;
-
-	// Teste provisório do uso da memória
+// Apenas para testes, remover depois
+void testeMemoria()
+{
+    // Testes provisório do uso da memória
 	Memoria gerenteMemoria;
 	int inicio;
 
@@ -46,8 +45,60 @@ int main(int argc, const char *argv[]) {
 
 	inicio = gerenteMemoria.alocaBloco(6, Memoria::Usuario, 500);
 	cout << inicio << '\n';
+}
 
-	//
+// Apenas para testes, remover depois
+void testeRecursos()
+{
+    // Testes provisórios da alocação de recursos
+    Recurso gerenteRecursos;
+
+    int resultado;
+
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Scanner);
+    cout << "Recurso alocado? : " << resultado << '\n';
+
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Scanner);
+    cout << "Recurso alocado? : " << resultado << '\n';
+
+    gerenteRecursos.liberaRecurso(1, Recurso::Scanner);
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Scanner);
+    cout << "Recurso alocado? : " << resultado << '\n';
+
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Scanner);
+    cout << "Recurso alocado? : " << resultado << '\n';
+
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Impressora);
+    cout << "Recurso alocado? : " << resultado << '\n';
+
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Impressora);
+    cout << "Recurso alocado? : " << resultado << '\n';
+
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Modem);
+    cout << "Recurso alocado? : " << resultado << '\n';
+
+    gerenteRecursos.liberaTodos(1);
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Scanner);
+    cout << "Recurso alocado? : " << resultado << '\n';
+
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Impressora);
+    cout << "Recurso alocado? : " << resultado << '\n';
+
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Impressora);
+    cout << "Recurso alocado? : " << resultado << '\n';
+
+    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Modem);
+    cout << "Recurso alocado? : " << resultado << '\n';
+}
+
+int main(int argc, const char *argv[]) {
+	string nomeArq;
+	ifstream arquivo;
+	std::list<Processo> processos;
+
+    testeMemoria();
+    testeRecursos();
+
 
 	// Verifica se nome do arquivo foi informado antes da execução.
 	/*if (argc < 2) {
