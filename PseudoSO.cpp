@@ -22,8 +22,6 @@ int main(int argc, const char *argv[]) {
 	ifstream arquivo;
 	std::list<Processo> processos;
 
-
-
 	// Teste provisório do uso da memória
 	Memoria gerenteMemoria;
 	int inicio;

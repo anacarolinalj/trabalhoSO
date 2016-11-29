@@ -33,13 +33,13 @@ int Memoria::alocaBloco(int id, TipoProcesso tipo, int tamanho)
 			inicioAlocacao = i;
 
 			// Verifica se existem blocos livres contíguos suficientes para a alocação
-			while (contador < tamanho && i + contador < fim && blocos[i + contador] == -1)
+			while ( (contador < tamanho) && (i + contador < fim) && (blocos[i + contador] == -1))
 				contador++;
 
 			// É possível fazer a alocação
 			if (contador == tamanho)
 			{
-				while (contador > 0)
+				while (contador >= 0)
 				{
 					blocos[i + contador] = id;
 					contador--;
