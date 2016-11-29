@@ -1,5 +1,6 @@
 #include "PseudoSO.h"
 #include "Processo.h"
+#include "Memoria.h"
 #include <iostream>
 #include <fstream>
 #include <istream>
@@ -21,6 +22,34 @@ int main(int argc, const char *argv[]) {
 	ifstream arquivo;
 	std::list<Processo> processos;
 
+
+
+	// Teste provisório do uso da memória
+	Memoria gerenteMemoria;
+	int inicio;
+
+	inicio = gerenteMemoria.alocaBloco(1, Memoria::TempoReal, 30);
+	cout << inicio << '\n';
+
+	inicio = gerenteMemoria.alocaBloco(2, Memoria::TempoReal, 30);
+	cout << inicio << '\n';
+
+	gerenteMemoria.liberaBloco(2);
+	gerenteMemoria.liberaBloco(3);
+
+	inicio = gerenteMemoria.alocaBloco(3, Memoria::TempoReal, 30);
+	cout << inicio << '\n';
+
+	inicio = gerenteMemoria.alocaBloco(4, Memoria::Usuario, 30);
+	cout << inicio << '\n';
+
+	inicio = gerenteMemoria.alocaBloco(5, Memoria::Usuario, 500);
+	cout << inicio << '\n';
+
+	inicio = gerenteMemoria.alocaBloco(6, Memoria::Usuario, 500);
+	cout << inicio << '\n';
+
+	//
 
 	// Verifica se nome do arquivo foi informado antes da execução.
 	/*if (argc < 2) {

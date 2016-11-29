@@ -11,7 +11,7 @@ FILES_TO_CLEAN := $(OBJECTS) $(DEPS)
 
 .PHONY : all clean realclean
 
-all : $(BINARY)
+all : $(BINARY) clean
 
 clean :
 	$(RM) $(FILES_TO_CLEAN)
