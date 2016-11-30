@@ -11,6 +11,8 @@
 #include <list>
 #include "Processo.h"
 
+#define MEMORY_REAL 64
+
 class FilaProcessosUsuario {
 public:
 	std::list<Processo> fila1;

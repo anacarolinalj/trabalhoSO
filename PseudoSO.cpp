@@ -17,6 +17,8 @@ using namespace std;
 #define QUANTUM 1
 #define TEMPO_MAX 1000
 
+#define MEMORY_REAL 64
+#define MEMORY_USER 960
 
 std::list<Processo> timer[TEMPO_MAX];
 
@@ -116,15 +118,15 @@ void testeRecursos()
 
 void adicionarFilas(Processo processo) {
 	// Aloca memória
-	processo.offset = (processo.prioridade == 0) ?
+	/*processo.offset = (processo.prioridade == 0) ?
 					   gerenteMemoria.alocaBloco(processo.pid,Memoria::TempoReal,processo.blocoMem) :
 					   gerenteMemoria.alocaBloco(processo.pid,Memoria::Usuario,processo.blocoMem);
+*/
 
-	// Caso tenha conseguido alocar, coloca nas filas.
-	if (processo.offset != -1) {
-		processos.push_back(processo);
-		filas.adicionarProcesso(processo);
-	}
+
+	processos.push_back(processo);
+	filas.adicionarProcesso(processo);
+
 }
 
 
@@ -168,27 +170,48 @@ void escalonadorUsuario() {
 	if (fila) {
 		processo = &fila->front();
 
-		// Executa instrução.
-		executarCPU(*processo, QUANTUM);
+		// Verifica se memória já foi alocada.
+		if (processo->offset == -1) {
+			processo->offset =
+				gerenteMemoria.alocaBloco(processo->pid,Memoria::Usuario,processo->blocoMem);
+		}
 
-		// Incrementa temporizador
-		temporizador += QUANTUM;
+		// Verifica novamente se memória pôde ser alocada.
+		if (processo->offset != -1) {
+			// Executa instrução.
+			executarCPU(*processo, QUANTUM);
 
-		// Decrementa tempo do processo
-		(*processo).tempoProcessador -= QUANTUM;
+			// Incrementa temporizador
+			temporizador += QUANTUM;
 
-		// Atualiza idade
-		(*processo).idade = -1;
+			// Decrementa tempo do processo
+			processo->tempoProcessador -= QUANTUM;
 
-		// Verifica se processo acabou para desalocar memória e tirar da fila.
-		if (!(*processo).tempoProcessador) {
-			gerenteMemoria.liberaBloco((*processo).pid);
-			(*fila).pop_front();
-		} else {
-			Processo temp = (*processo);
+			// Atualiza idade
+			processo->idade = -1;
 
-			(*fila).pop_front();
-			(*fila).push_back(temp);
+			// Verifica se processo acabou para desalocar memória e tirar da fila.
+			if (!processo->tempoProcessador) {
+				gerenteMemoria.liberaBloco(processo->pid);
+				fila->pop_front();
+			} else {
+				// Copia primeiro processo para o fim da fila.
+				fila->push_back(*processo);
+				fila->pop_front();
+			}
+		}
+
+		// Caso não tenha conseguido alocar memória, processo vai para o fim da fila.
+		else {
+			// Copia primeiro processo para o fim da fila.
+			if (fila->size() != 1) {
+				fila->push_back(*processo);
+				fila->pop_front();
+			}
+
+			temporizador += QUANTUM;
+						//sleep(1);
+			filas.age();
 		}
 
 	} else {
@@ -208,8 +231,13 @@ void escalonador() {
 		while (!filas.processosReais.empty()) {
 			Processo processo = filas.processosReais.front();
 
-			// "Executa" instruções e mostra informações do processo tela.
-			executarCPU(processo, processo.tempoProcessador);
+			// Aloca memória
+			processo.offset = gerenteMemoria.alocaBloco(processo.pid,Memoria::TempoReal,processo.blocoMem);
+
+			if (processo.offset != -1) {
+				// "Executa" instruções e mostra informações do processo tela.
+				executarCPU(processo, processo.tempoProcessador);
+			}
 
 			// Incrementa o temporizador.
 			temporizador += processo.tempoProcessador;
@@ -265,7 +293,12 @@ int main(int argc, const char *argv[]) {
 		fimExecucao = processosArquivo.back().tempoInicializacao + 1;
 
 		despachante(fimExecucao);
+
+		/*cout << "\n----fila1----\n";
+		imprimirProcessos(filas.processosUsuario.fila1);
+		cout << "\n--------------\n";*/
 	}
+
 }
 
 std::list<Processo> lerArquivo(ifstream & arquivo) {
@@ -289,7 +322,7 @@ std::list<Processo> lerArquivo(ifstream & arquivo) {
 
 			// Coloca as informações no processo.
 			processo.pid = pid++;
-			processo.offset = 0;
+			processo.offset = -1;
 			processo.idade = 0;
 			while (dados != NULL) {
 				switch (it) {
@@ -306,10 +339,43 @@ std::list<Processo> lerArquivo(ifstream & arquivo) {
 				it++;
 			}
 
-			timer[processo.tempoInicializacao].push_back(processo);
 
-			// Adiciona novo processo à lista de processos
-			processos.push_back(processo);
+			if ((!processo.prioridade) &&
+					((processo.codDisco != 0) || (processo.reqImpressora != 0) ||
+					(processo.reqModem != 0) || (processo.reqScanner != 0))) {
+				cout << "\nRequisicao de recurso para processo real. Isso nao e permitido. Requisicao"
+						" sera ignorada.\n";
+
+				processo.reqImpressora = 0;
+				processo.reqModem = 0;
+				processo.reqScanner = 0;
+				processo.codDisco = 0;
+			}
+
+			if ((processo.prioridade < 0) || (processo.prioridade > 3)) {
+				cout << "\nProcesso com prioridade () " << processo.prioridade
+						<< " nao aceita. As prioridade deve estar entre 0 e 3. "
+							"Processo sera ignorado.\n";
+
+			} else if ( (processo.blocoMem > MEMORY_USER) || ( (!processo.prioridade) && (processo.blocoMem > MEMORY_REAL))) {
+				cout <<"\nProcesso tenta alocar mais memória do que o permitido para a sua prioridade."
+						"Os processos de usuario devem estar na faixa 0-960 e os de tempo real na faixa 0-64."
+						"Processo sera ignorado.\n";
+			} else if ((processo.codDisco < 0) || (processo.codDisco > 2) ||
+						(processo.reqImpressora < 0) || (processo.reqImpressora > 2) ||
+						(processo.reqModem < 0) || (processo.reqModem > 1) ||
+						(processo.reqScanner < 0) || (processo.reqScanner > 1)) {
+				cout << "\nRequisicao de recurso nao existente. Os recursos estao na faixa:"
+						"\n SATA: 0 - 2"
+						"\n Impressora: 0 - 1"
+						"\n Modem: 0 - 1"
+						"\n Scanner: 0 - 1"
+						"\n Processo sera ignorado.\n\n";
+
+			} else {
+				timer[processo.tempoInicializacao].push_back(processo);
+				processos.push_back(processo);
+			}
 		}
 	}
 	arquivo.close();

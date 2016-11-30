@@ -37,7 +37,7 @@ void Filas::promoverProcesso() {
 			//cout << "PID: " << it->pid << "--" << "IDADE: " << it->idade << "\n";
 
 			// Se a idade limite ultrapassar o permitido, processo aumenta de prioridade.
-			if (it->idade >= IDADE_LIMITE) {
+			if ((it->idade >= IDADE_LIMITE) && (it->blocoMem <  MEMORY_REAL)) {
 				it->prioridade = 0;
 				it->idade = 0;
 				processosReais.push_back(*it);
