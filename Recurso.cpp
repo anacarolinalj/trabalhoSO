@@ -2,7 +2,7 @@
  * Recurso.cpp
  *
  *  Created on: 29 de nov de 2016
- *      Author: ana
+ *      Author: Jorge
  */
 
 #include "Recurso.h"
@@ -68,6 +68,18 @@ bool Recurso::alocaRecurso(int id, TipoRecurso tipo)
         }
         return false;
     }
+
+    return false;
+}
+
+bool Recurso::checaRecurso(int id)
+{
+    if(scanner == id) return true;
+    if(impressora[0] == id) return true;
+    if(impressora[1] == id) return true;
+    if(modem == id) return true;
+    if(sata[0] == id)  return true;
+    if(sata[1] == id)  return true;
 
     return false;
 }

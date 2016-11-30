@@ -2,7 +2,7 @@
  * Recurso.h
  *
  *  Created on: 29 de nov de 2016
- *      Author: ana
+ *      Author: Jorge
  */
 
 #ifndef RECURSO_H_
@@ -15,6 +15,9 @@ public:
 	virtual ~Recurso();
 
     bool alocaRecurso(int id, TipoRecurso tipo);
+
+    // Checa se um processo possui recursos alocados
+    bool checaRecurso(int id);
 
     // Libera os recursos de um tipo alocados para um processo
     void liberaRecurso(int id, TipoRecurso tipo);

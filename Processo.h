@@ -3,6 +3,7 @@
  *
  *  Created on: 29 de nov de 2016
  *      Author: ana
+ *      Author: Jorge
  */
 
 #ifndef PROCESSO_H_
@@ -23,6 +24,10 @@ public:
 	int codDisco;
 	Processo();
 	virtual ~Processo();
+
+
+    // Checa se um processo precisa de recursos
+	bool precisaRecursos();
 };
 
 #endif /* PROCESSO_H_ */

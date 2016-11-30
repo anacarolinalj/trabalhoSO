@@ -35,86 +35,15 @@ Filas filas;
 // Gerente da memória.
 Memoria gerenteMemoria;
 
+// Gerente de recursos
+Recurso gerenteRecursos;
+
 // Temporizador
 int temporizador;
 
 std::list<Processo> lerArquivo(ifstream & arquivo);
 void imprimirProcesso (Processo processo);
 void imprimirProcessos(std::list<Processo> processos);
-
-
-// Apenas para testes, remover depois
-void testeMemoria()
-{
-    // Testes provisório do uso da memória
-	Memoria gerenteMemoria;
-	int inicio;
-
-	inicio = gerenteMemoria.alocaBloco(1, Memoria::TempoReal, 30);
-	cout << inicio << '\n';
-
-	inicio = gerenteMemoria.alocaBloco(2, Memoria::TempoReal, 30);
-	cout << inicio << '\n';
-
-	gerenteMemoria.liberaBloco(2);
-	gerenteMemoria.liberaBloco(3);
-
-	inicio = gerenteMemoria.alocaBloco(3, Memoria::TempoReal, 30);
-	cout << inicio << '\n';
-
-	inicio = gerenteMemoria.alocaBloco(4, Memoria::Usuario, 30);
-	cout << inicio << '\n';
-
-	inicio = gerenteMemoria.alocaBloco(5, Memoria::Usuario, 500);
-	cout << inicio << '\n';
-
-	inicio = gerenteMemoria.alocaBloco(6, Memoria::Usuario, 500);
-	cout << inicio << '\n';
-}
-
-// Apenas para testes, remover depois
-void testeRecursos()
-{
-    // Testes provisórios da alocação de recursos
-    Recurso gerenteRecursos;
-
-    int resultado;
-
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Scanner);
-    cout << "Recurso alocado? : " << resultado << '\n';
-
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Scanner);
-    cout << "Recurso alocado? : " << resultado << '\n';
-
-    gerenteRecursos.liberaRecurso(1, Recurso::Scanner);
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Scanner);
-    cout << "Recurso alocado? : " << resultado << '\n';
-
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Scanner);
-    cout << "Recurso alocado? : " << resultado << '\n';
-
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Impressora);
-    cout << "Recurso alocado? : " << resultado << '\n';
-
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Impressora);
-    cout << "Recurso alocado? : " << resultado << '\n';
-
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Modem);
-    cout << "Recurso alocado? : " << resultado << '\n';
-
-    gerenteRecursos.liberaTodos(1);
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Scanner);
-    cout << "Recurso alocado? : " << resultado << '\n';
-
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Impressora);
-    cout << "Recurso alocado? : " << resultado << '\n';
-
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Impressora);
-    cout << "Recurso alocado? : " << resultado << '\n';
-
-    resultado = gerenteRecursos.alocaRecurso(1, Recurso::Modem);
-    cout << "Recurso alocado? : " << resultado << '\n';
-}
 
 void adicionarFilas(Processo processo) {
 	// Aloca memória
@@ -123,12 +52,10 @@ void adicionarFilas(Processo processo) {
 					   gerenteMemoria.alocaBloco(processo.pid,Memoria::Usuario,processo.blocoMem);
 */
 
-
 	processos.push_back(processo);
 	filas.adicionarProcesso(processo);
 
 }
-
 
 void executarCPU(Processo processo, int tempo) {
 	cout << "\ndispatcher => \n";
@@ -176,8 +103,27 @@ void escalonadorUsuario() {
 				gerenteMemoria.alocaBloco(processo->pid,Memoria::Usuario,processo->blocoMem);
 		}
 
-		// Verifica novamente se memória pôde ser alocada.
-		if (processo->offset != -1) {
+		// Aloca recursos
+
+		bool recursosAlocados = true;
+		// Verifica se o processo precisa de recursos e estes ainda não foram alocados para ele
+		if(processo->precisaRecursos() && ! gerenteRecursos.checaRecurso(processo->pid))
+        {
+            if(processo->reqScanner)
+                recursosAlocados = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Scanner);
+
+            if(processo->reqModem)
+                recursosAlocados = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Modem);
+
+            if(processo->reqImpressora)
+                recursosAlocados = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Impressora);
+
+            if(processo->codDisco)
+                recursosAlocados = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Sata);
+        }
+
+		// Verifica novamente se memória pôde ser alocada e se os recursos necessários já foram alocados.
+		if (processo->offset != -1 && recursosAlocados) {
 			// Executa instrução.
 			executarCPU(*processo, QUANTUM);
 
@@ -193,6 +139,7 @@ void escalonadorUsuario() {
 			// Verifica se processo acabou para desalocar memória e tirar da fila.
 			if (!processo->tempoProcessador) {
 				gerenteMemoria.liberaBloco(processo->pid);
+				gerenteRecursos.liberaTodos(processo->pid);
 				fila->pop_front();
 			} else {
 				// Copia primeiro processo para o fim da fila.
@@ -200,8 +147,7 @@ void escalonadorUsuario() {
 				fila->pop_front();
 			}
 		}
-
-		// Caso não tenha conseguido alocar memória, processo vai para o fim da fila.
+		// Caso não tenha conseguido alocar memória ou recurso, processo vai para o fim da fila.
 		else {
 			// Copia primeiro processo para o fim da fila.
 			if (fila->size() != 1) {

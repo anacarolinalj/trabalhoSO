@@ -2,7 +2,7 @@
  * Memoria.h
  *
  *  Created on: 29 de nov de 2016
- *      Author: ana
+ *      Author: Jorge
  */
 
 #ifndef MEMORIA_H_
