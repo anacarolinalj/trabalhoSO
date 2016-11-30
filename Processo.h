@@ -11,6 +11,7 @@
 class Processo {
 public:
 	int pid;
+	int idade;
 	int offset;
 	int tempoInicializacao;
 	int prioridade;
