@@ -20,9 +20,36 @@
 \section{Ferramentas e Linguagem utilizada}
 
 \section{Solução desenvolvida}
+\subsection{Pseudo SO}
+A execução do programa começa com a leitura do arquivo de entrada. O arquivo é lido linha a linha e cada linha é analisada para extrair os dados relacionados a cada processo. Após a leitura de um processo, caso ele tenha entradas corretas -- isto é, as requisições de dispositivos e memória estejam dentro dos limites definidos -- ele é armazenado no vetor de lista de processos cujo nome é \textbf{cliente} na posição do seu tempo de inicialização.
+
+O vetor \textbf{cliente} atua como o cliente que solicita a criação de processos. Cada entrada dele tem uma lista de processos que serão requisitados no tempo do índice daquela entrada. Por exemplo, no índice zero estão todos os processos cujo tempo de inicialização são zero. No índice 1 estão os processos de tempo de inicialização 1 e assim sucessivamente.
+
+Após a finalização da leitura do arquivo, a \textbf{main} chama o método \textbf{pseudoSO}.
+O sistema operacional é simulado percorrendo-se o vetor \textbf{cliente} e executando as suas requisições. A cada entrada do vetor, os processos daquele índice são adicionados às filas correspondentes às suas prioridades. 
+Em seguida, verifica-se se o \textbf{temporizador}, que é uma variável que atua como um clock, é maior que o último índice lido do vetor \textbf{cliente}. Caso não seja, o \textbf{escalonador} é chamado. Caso seja, o vetor \textbf{cliente} deve ser lido até que esses valores se igualem, para que todos os processos até aquele tempo entrem nas filas de prioridade. Quando a leitura de \textbf{cliente} termina, o \textbf{escalonador} é chamado até que todas as filas de prioridade se esvaziem.
+
+O \textbf{escalonador} primeiramente verifica se a fila de processos de tempo real está vazia. Caso esteja, ele chama o \textbf{escalonadorUsuario}. 
+Caso contrário, a memória para os processos reais é alocada e eles são executados e depois desalocados até que a fila se esvazie.
+
+O método \textbf{escalonadorUsuario} inicialmente verifica qual a fila de maior prioridade não vazia. Caso todas estejam vazias, ele aumenta o temporizador e chama o método \textbf{age}.
+Caso uma das filas esteja não vazia, ele pega o primeiro processo dessa fila e realiza os seguintes passos: 
+Verifica se memória para o processo foi alocada. Se não tiver, tenta alocar. Em seguida, ele tenta alocar os recursos do processo caso ele esteja requisitando algum.
+Caso a alocação de recursos ou de memória não tenha sido bem sucedida, o processo é movido para o fim da fila e incrementa-se o \textbf{temporizador}.
+
+Se a memória e recursos do processo tiverem sido alocados, o processo recebe posse da CPU pelo período de um \emph{quantum}. Após o fim do processamento, ele incrementa o temporizador, altera a idade do processo (recebe \textbf{-1}) e verifica se o tempo de processamento zerou. Caso tenha, o processo é excluído da fila e a sua memória é liberada. Caso contrário, ele é movido para o fim da fila.
+Por fim, \textbf{escalonadorUsuario} chama o método \textbf{promoverProcesso}.
+
 \subsection{Módulo de Processos}
+Um processo é simplesmente uma coleção de dados do processo, contando com os seguintes campos que foram extraídos do arquivo de entrada: \textbf{pid, idade, offset, tempoInicializacao, prioridade, tempoProcessador, blocoMem, reqImpressora, reqScanner, reqModem, codDisco}.
+
+Além disso, esse módulo tem também um método chamado \textbf{precisaRecursos}, que verifica se o processo precisa alocar algum recurso.
 
 \subsection{Módulo de Filas}
+O módulo de filas é composto por duas estruturas: \textbf{processosReais} e \textbf{processosUsuario}. A primeira é apenas uma estrutura de dados do tipo \emph{list}, estrutura da biblioteca padrão \emph{list} do \emph{C++}, que contém processos e será utilizada como uma fila. Os \textbf{processosUsuario}, por sua vez, são uma classe que contém três listas de processos que também serão usadas como filas. Cada uma dessas filas corresponde às prioridades dos processos que elas armazenarão, isto é, a \textbf{fila1} terá os processos de prioridade 1 e assim por diante.
+
+O módulo de filas tem três métodos: \textbf{adicionarFilas}, \textbf{promoverProcesso} e \textbf{age}. O método \textbf{adicionarFilas} adiciona um processo a uma das filas de acordo com a sua prioridade e também o adiciona à fila de processos globais. \textbf{promoverProcesso} por sua vez varre todas as filas de prioridade e verifica se os processos contidos nelas estão velhos o suficiente para terem suas prioridades aumentadas. Por fim, \textbf{age} simplesmente percorre todas as filas e incrementa a variável idade de todos os processos.
+
 
 \subsection{Módulo de Memória}
 	O módulo de memória conta basicamente com um \emph{array} de inteiros com 1024 posições por padrão. Cada posição desse \emph{array} corresponde a um bloco da memória, com seu conteúdo sendo igual ao \textbf{pid} do processo alocado, ou a \textbf{-1} caso o bloco esteja livre.
