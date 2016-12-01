@@ -19,19 +19,10 @@ Filas::~Filas() {
 	// TODO Auto-generated destructor stub
 }
 
-void Filas::adicionarProcesso(Processo processo) {
-	switch (processo.prioridade) {
-		case 0: processosReais.push_back(processo) ; break;
-		case 1: processosUsuario.fila1.push_back(processo); break;
-		case 2: processosUsuario.fila2.push_back(processo); break;
-		case 3: processosUsuario.fila3.push_back(processo); break;
-	}
-}
-
 using namespace std;
 #include <iostream>
 
-void Filas::promoverProcesso() {
+void Filas::promoverProcessos() {
 	if (!processosUsuario.fila1.empty()) {
 		for (std::list<Processo>::iterator it = processosUsuario.fila1.begin(); it != processosUsuario.fila1.end(); it++) {
 			//cout << "PID: " << it->pid << "--" << "IDADE: " << it->idade << "\n";
@@ -94,3 +85,12 @@ void Filas::age() {
 	}
 }
 
+void Filas::adicionarFilas(Processo processo, std::list<Processo> *processos) {
+	processos->push_back(processo);
+	switch (processo.prioridade) {
+			case 0: processosReais.push_back(processo) ; break;
+			case 1: processosUsuario.fila1.push_back(processo); break;
+			case 2: processosUsuario.fila2.push_back(processo); break;
+			case 3: processosUsuario.fila3.push_back(processo); break;
+	}
+}

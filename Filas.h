@@ -27,8 +27,8 @@ public:
 	Filas();
 	virtual ~Filas();
 
-	void adicionarProcesso(Processo processo);
-	void promoverProcesso();
+	void adicionarFilas(Processo processo, std::list<Processo> *processos);
+	void promoverProcessos();
 	void age();
 };
 

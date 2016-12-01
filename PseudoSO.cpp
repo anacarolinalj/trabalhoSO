@@ -14,17 +14,10 @@
 
 using namespace std;
 
-#define QUANTUM 1
-#define TEMPO_MAX 1000
-
-#define MEMORY_REAL 64
-#define MEMORY_USER 960
-
-std::list<Processo> timer[TEMPO_MAX];
-
-
-// Tempo do último processo
-int fimExecucao;
+/*
+ * Variáveis globais
+ */
+std::list<Processo> cliente[TEMPO_MAX];
 
 // Lista com todos os processos lidos do arquivo.
 std::list<Processo> processos;
@@ -35,52 +28,107 @@ Filas filas;
 // Gerente da memória.
 Memoria gerenteMemoria;
 
-// Gerente de recursos
+// Gerente de recursos.
 Recurso gerenteRecursos;
 
-// Temporizador
+// Temporizador.
 int temporizador;
 
+/*
+ * Protótipos.
+ */
 std::list<Processo> lerArquivo(ifstream & arquivo);
+void executarCPU(Processo processo, int tempo);
+void escalonadorUsuario();
+void escalonador();
+void executarCPU(Processo processo, int tempo);
+void pseudoSO(int fimExecucao);
+
+//TODO Excluir depois
 void imprimirProcesso (Processo processo);
 void imprimirProcessos(std::list<Processo> processos);
 
-void adicionarFilas(Processo processo) {
-	// Aloca memória
-	/*processo.offset = (processo.prioridade == 0) ?
-					   gerenteMemoria.alocaBloco(processo.pid,Memoria::TempoReal,processo.blocoMem) :
-					   gerenteMemoria.alocaBloco(processo.pid,Memoria::Usuario,processo.blocoMem);
-*/
 
-	processos.push_back(processo);
-	filas.adicionarProcesso(processo);
+int main(int argc, const char *argv[]) {
+	string nomeArq;
+	ifstream arquivo;
+	std::list<Processo> processosArquivo;
+	int fimExecucao;
+
+
+	// Verifica se nome do arquivo foi informado antes da execução.
+	/*if (argc < 2) {
+		cout << "\nInforme o nome do arquivo com os processos: ";
+		cin >> nomeArq;
+	} else nomeArq = argv[1];*/
+
+	nomeArq = "processos.txt";
+
+	arquivo.open(nomeArq.c_str(), ios::in);
+
+	// Verifica se arquivo foi aberto.
+	if (arquivo.is_open()) {
+		processosArquivo = lerArquivo(arquivo);
+		fimExecucao = processosArquivo.back().tempoInicializacao + 1;
+
+		pseudoSO(fimExecucao);
+
+		/*cout << "\n----fila1----\n";
+		imprimirProcessos(filas.processosUsuario.fila1);
+		cout << "\n--------------\n";*/
+	}
 
 }
 
-void executarCPU(Processo processo, int tempo) {
-	cout << "\ndispatcher => \n";
+/*
+ * Simulação do Pseudo SO.
+ */
+void pseudoSO(int fimExecucao) {
 
-	cout << "\t PID: " << processo.pid << '\n';
-	cout << "\t offset: " << processo.offset << '\n';
-	cout << "\t blocks: " << processo.blocoMem << '\n';
-	cout << "\t priority: " << processo.prioridade << '\n';
-	cout << "\t time: " << processo.tempoProcessador << '\n';
-	cout << "\t printers: " << processo.reqImpressora << '\n';
-	cout << "\t scanners: " << processo.reqScanner << '\n';
-	cout << "\t modems: " << processo.reqModem << '\n';
-	cout << "\t drives: " << processo.codDisco << '\n';
-	cout << "\n";
+	// Adiciona todos os processos à fila global de processos.
+	for (int it = 0; it < fimExecucao; it++) {
+		for (std::list<Processo>::iterator processo = cliente[it].begin(); processo != cliente[it].end(); processo++) {
+			filas.adicionarFilas(*processo,&processos);
+		}
+		if (temporizador <= it) escalonador();
 
-	cout << "Process " << processo.pid << "\n";
-	cout << "P" << processo.pid << " STARTED \n";
-
-	for (int it = 1; it < tempo+1 ; it++) {
-		cout << "P" << processo.pid << " instruction " << it << "\n";
-		filas.age();
-		//sleep(1);
 	}
 
-	cout << "SIGINT" << "\n";
+	// Chama o escalonador até acabar de executar todos os processos.
+	while (	(!filas.processosReais.empty()) ||
+				(!filas.processosUsuario.fila3.empty()) ||
+				(!filas.processosUsuario.fila2.empty()) ||
+				(!filas.processosUsuario.fila1.empty()))
+		escalonador();
+}
+
+void escalonador() {
+	if (filas.processosReais.empty()) escalonadorUsuario();
+
+	else {
+		// Escalona processos de tempo real.
+		while (!filas.processosReais.empty()) {
+			Processo processo = filas.processosReais.front();
+
+			// Aloca memória
+			if (processo.offset == -1 ) {
+				processo.offset = gerenteMemoria.alocaBloco(processo.pid,Memoria::TempoReal,processo.blocoMem);
+			}
+
+			// "Executa" instruções e mostra informações do processo tela.
+			executarCPU(processo, processo.tempoProcessador);
+
+			// Incrementa o temporizador.
+			temporizador += processo.tempoProcessador;
+
+			// Libera memória do bloco.
+			gerenteMemoria.liberaBloco(processo.pid);
+
+			// Retira processo da fila de processos reais.
+			filas.processosReais.pop_front();
+
+		}
+	}
 }
 
 void escalonadorUsuario() {
@@ -125,7 +173,7 @@ void escalonadorUsuario() {
 		// Verifica novamente se memória pôde ser alocada e se os recursos necessários já foram alocados.
 		if (processo->offset != -1 && recursosAlocados) {
 			// Executa instrução.
-			executarCPU(*processo, QUANTUM);
+			executarCPU(*processo,QUANTUM);
 
 			// Incrementa temporizador
 			temporizador += QUANTUM;
@@ -166,85 +214,34 @@ void escalonadorUsuario() {
 		filas.age();
 	}
 
-	// Verifica se algum processo pode aumentar de prioridade.
-	filas.promoverProcesso();
+	// Verifica se os processos das filas podem aumentar de prioridade.
+	filas.promoverProcessos();
 }
 
-void escalonador() {
-	if (filas.processosReais.empty()) escalonadorUsuario();
+void executarCPU(Processo processo, int tempo) {
+		cout << "\n dispatcher => \n";
 
-	else {
-		while (!filas.processosReais.empty()) {
-			Processo processo = filas.processosReais.front();
+		cout << "\t PID: " << processo.pid << '\n';
+		cout << "\t offset: " << processo.offset << '\n';
+		cout << "\t blocks: " << processo.blocoMem << '\n';
+		cout << "\t priority: " << processo.prioridade << '\n';
+		cout << "\t time: " << processo.tempoProcessador << '\n';
+		cout << "\t printers: " << processo.reqImpressora << '\n';
+		cout << "\t scanners: " << processo.reqScanner << '\n';
+		cout << "\t modems: " << processo.reqModem << '\n';
+		cout << "\t drives: " << processo.codDisco << '\n';
+		cout << "\n";
 
-			// Aloca memória
-			processo.offset = gerenteMemoria.alocaBloco(processo.pid,Memoria::TempoReal,processo.blocoMem);
+		cout << "Process " << processo.pid << "\n";
+		cout << "P" << processo.pid << " STARTED \n";
 
-			if (processo.offset != -1) {
-				// "Executa" instruções e mostra informações do processo tela.
-				executarCPU(processo, processo.tempoProcessador);
-			}
-
-			// Incrementa o temporizador.
-			temporizador += processo.tempoProcessador;
-
-			// Libera memória do bloco.
-			gerenteMemoria.liberaBloco(processo.pid);
-
-			// Retira processo da fila de processos reais.
-			filas.processosReais.pop_front();
-
+		for (int it = 1; it < tempo+1 ; it++) {
+			cout << "P" << processo.pid << " instruction " << it << "\n";
+			filas.age();
+			//sleep(1);
 		}
-	}
-}
 
-void despachante(int fimExecucao) {
-
-	// Adiciona todos os processos à fila global de processos.
-	for (int it = 0; it < fimExecucao; it++) {
-		for (std::list<Processo>::iterator processo = timer[it].begin(); processo != timer[it].end(); processo++) {
-			adicionarFilas(*processo);
-		}
-		if (temporizador <= it) escalonador();
-
-	}
-
-	// Chama o escalonador até acabar de executar todos os processos.
-	while (	(!filas.processosReais.empty()) ||
-				(!filas.processosUsuario.fila3.empty()) ||
-				(!filas.processosUsuario.fila2.empty()) ||
-				(!filas.processosUsuario.fila1.empty()))
-		escalonador();
-}
-
-int main(int argc, const char *argv[]) {
-	string nomeArq;
-	ifstream arquivo;
-	std::list<Processo> processosArquivo;
-
-
-	// Verifica se nome do arquivo foi informado antes da execução.
-	/*if (argc < 2) {
-		cout << "\nInforme o nome do arquivo com os processos: ";
-		cin >> nomeArq;
-	} else nomeArq = argv[1];*/
-
-	nomeArq = "processos.txt";
-
-	arquivo.open(nomeArq.c_str(), ios::in);
-
-	// Verifica se arquivo foi aberto.
-	if (arquivo.is_open()) {
-		processosArquivo = lerArquivo(arquivo);
-		fimExecucao = processosArquivo.back().tempoInicializacao + 1;
-
-		despachante(fimExecucao);
-
-		/*cout << "\n----fila1----\n";
-		imprimirProcessos(filas.processosUsuario.fila1);
-		cout << "\n--------------\n";*/
-	}
-
+		cout << "SIGINT" << "\n";
 }
 
 std::list<Processo> lerArquivo(ifstream & arquivo) {
@@ -319,7 +316,7 @@ std::list<Processo> lerArquivo(ifstream & arquivo) {
 						"\n Processo sera ignorado.\n\n";
 
 			} else {
-				timer[processo.tempoInicializacao].push_back(processo);
+				cliente[processo.tempoInicializacao].push_back(processo);
 				processos.push_back(processo);
 			}
 		}
