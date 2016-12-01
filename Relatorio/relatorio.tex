@@ -25,6 +25,11 @@
 \subsection{Módulo de Filas}
 
 \subsection{Módulo de Memória}
+	O módulo de memória conta basicamente com um \emph{array} de inteiros com 1024 posições por padrão. Cada posição desse \emph{array} corresponde a um bloco da memória, com seu conteúdo sendo igual ao \textbf{pid} do processo alocado, ou a \textbf{-1} caso o bloco esteja livre.
+	
+	Além disso, o módulo considera que a região para processos em tempo real possui 64 blocos, sendo os 960 blocos restantes reservados para processos de usuário.
+	
+	O módulo possui apenas dois métodos, \textbf{alocaBloco} e \textbf{liberaBloco}. \textbf{AlocaBloco} aloca uma porção contígua de memória para um processo, respeitando a região reservada para cada tipo de processo(tempo real ou usuário), retornando o índice do início do bloco de alocação. Caso não encontre blocos contíguos suficientes para o processo a alocação não é feita e o método retorna -1. \textbf{LiberaBloco} libera toda a região de memória anteriormente alocada para um processo.
 
 \subsection{Módulo de Recursos}
 
