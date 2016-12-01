@@ -32,7 +32,10 @@
 	O módulo possui apenas dois métodos, \textbf{alocaBloco} e \textbf{liberaBloco}. \textbf{AlocaBloco} aloca uma porção contígua de memória para um processo, respeitando a região reservada para cada tipo de processo(tempo real ou usuário), retornando o índice do início do bloco de alocação. Caso não encontre blocos contíguos suficientes para o processo a alocação não é feita e o método retorna -1. \textbf{LiberaBloco} libera toda a região de memória anteriormente alocada para um processo.
 
 \subsection{Módulo de Recursos}
+	O módulo de recursos é composto por variáveis do tipo inteiro que identificam o processo para o qual cada tipo de recurso está alocado: \emph{scanner}, duas impressoras, modem e dois \emph{sata}. As impressora e os satas são armazenados como um \emph{array} de duas posições. Caso o recurso não esteja alocado, é armazenado \textbf{-1} na variável correspondente.
 
+	O módulo possui quatro métodos. O método \textbf{alocaRecurso} aloca o recurso de um tipo para um processo. Caso essa alocação não seja possível o método retorna -1. \textbf{checaRecurso} verifica se um processo, identificado pelo seu pid, possui algum recurso alocado, retornando \emph{true} ou \emph{false}. O método \emph{liberaRecurso} libera os recursos de um determinado tipo que estejam alocados para um processo, enquanto o método \textbf{liberaTodos} funciona da mesma forma, mas liberando os recursos de todos os tipos que estejam alocados para um processo.
+	
 \section{Dificuldades encontradas}
 
 \section{Divisão do trabalho}
