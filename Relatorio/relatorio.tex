@@ -5,18 +5,31 @@
 \usepackage[utf8x]{inputenc}
 \usepackage[T1]{fontenc}
 
-%% Sets page size and margins
 \usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+\usepackage{filecontents}
+
+
+\begin{filecontents*}{general.bib}
+	@book{tanebaum,
+		author = {Tanenbaum, A. S.},
+		year = {2010},
+		title = { Sistemas Operacionais Modernos},
+		publisher = {Prentice-Hall},
+		edition = 3
+	}
+\end{filecontents*}
 
 \title{Implementação de um Pseudo-SO}
 \author{Ana Carolina Lopes, Jorge Luiz Andrade}
 \date{}
 
 \begin{document}
+
 \maketitle
 
 \section{Introdução}
-Este trabalho apresenta o desenvolvimento de um pseudo sistema operacional, responsável pelo escalonamento de processos fictícios lidos de um arquivo de entrada. Foi desenvolvido utilizando-se \textbf{C++} com uso de bibliotecas padrões, devido à familiaridade dos membros do grupo com a linguagem. 
+Este trabalho apresenta o desenvolvimento de um pseudo sistema operacional, responsável pelo escalonamento de processos fictícios lidos de um arquivo de entrada. Foi desenvolvido utilizando-se \textbf{C++} com uso de bibliotecas padrões, devido à familiaridade dos membros do grupo com a linguagem.
 
 \section{Solução desenvolvida}
 \subsection{Pseudo SO}
@@ -65,7 +78,16 @@ O módulo de filas tem três métodos: \textbf{adicionarFilas}, \textbf{promover
 \section{Dificuldades encontradas}
 
 \section{Divisão do trabalho}
-\bibliographystyle{alpha}
-\bibliography{sample}
+\begin{itemize}
+	\item \textbf{Jorge Luiz Andrade} ficou responsável pelos módulos de memória e recursos, checagem e alocação dos recursos ao executar os processos, e escrita artigo.
+\end{itemize}
+
+
+
+\renewcommand\refname{Bibliografia}
+
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{general}
 
 \end{document}
