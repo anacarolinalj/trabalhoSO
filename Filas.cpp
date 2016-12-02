@@ -211,9 +211,25 @@ void Filas::age() {
 void Filas::adicionarFilas(Processo processo) {
 	filaGlobal.push_back(processo);
 	switch (processo.prioridade) {
-			case 0: processosReais.push_back(processo) ; break;
-			case 1: processosUsuario.fila1.push_back(processo); break;
-			case 2: processosUsuario.fila2.push_back(processo); break;
-			case 3: processosUsuario.fila3.push_back(processo); break;
+			case 0:
+				if (processosReais.size() < 1000)
+					processosReais.push_back(processo);
+				else cout << "\nFila de processos reais cheia.";
+				break;
+			case 1:
+				if (processosUsuario.fila1.size() < 1000)
+					processosUsuario.fila1.push_back(processo);
+				else cout << "\nFila de processos de prioridade 1 cheia.";
+				break;
+			case 2:
+				if (processosUsuario.fila2.size() < 1000)
+					processosUsuario.fila2.push_back(processo);
+				else cout << "\nFila de processos de prioridade 2 cheia.";
+				break;
+			case 3:
+				if (processosUsuario.fila3.size() < 1000)
+					processosUsuario.fila3.push_back(processo);
+				else cout << "\nFila de processos de prioridade 3 cheia.";
+				break;
 	}
 }
