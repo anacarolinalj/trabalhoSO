@@ -11,16 +11,16 @@
 #include <stdlib.h>
 #include <list>
 #include <unistd.h>
+#include <cstdio>
 
 using namespace std;
 
 /*
  * Variáveis globais
  */
-std::list<Processo> cliente[TEMPO_MAX];
 
-// Lista com todos os processos lidos do arquivo.
-std::list<Processo> processos;
+// Lista de requisições
+std::list<Processo> cliente[TEMPO_MAX];
 
 // Filas de processos para escalonamento.
 Filas filas;
@@ -34,6 +34,9 @@ Recurso gerenteRecursos;
 // Temporizador.
 int temporizador;
 
+// Pid do processo que está sendo executado pela CPU.
+int cpu;
+
 /*
  * Protótipos.
  */
@@ -43,10 +46,6 @@ void escalonadorUsuario();
 void escalonador();
 void executarCPU(Processo processo, int tempo);
 void pseudoSO(int fimExecucao);
-
-//TODO Excluir depois
-void imprimirProcesso (Processo processo);
-void imprimirProcessos(std::list<Processo> processos);
 
 
 int main(int argc, const char *argv[]) {
@@ -84,11 +83,12 @@ int main(int argc, const char *argv[]) {
  * Simulação do Pseudo SO.
  */
 void pseudoSO(int fimExecucao) {
+	cpu = -1;
 
 	// Adiciona todos os processos à fila global de processos.
 	for (int it = 0; it < fimExecucao; it++) {
 		for (std::list<Processo>::iterator processo = cliente[it].begin(); processo != cliente[it].end(); processo++) {
-			filas.adicionarFilas(*processo,&processos);
+			filas.adicionarFilas(*processo);
 		}
 		if (temporizador <= it) escalonador();
 
@@ -100,6 +100,8 @@ void pseudoSO(int fimExecucao) {
 				(!filas.processosUsuario.fila2.empty()) ||
 				(!filas.processosUsuario.fila1.empty()))
 		escalonador();
+
+	cout << "P" << cpu << " return SIGINT\n";
 }
 
 void escalonador() {
@@ -124,23 +126,24 @@ void escalonador() {
 			// Libera memória do bloco.
 			gerenteMemoria.liberaBloco(processo.pid);
 
-			// Retira processo da fila de processos reais.
-			filas.processosReais.pop_front();
+			// Retira processo da fila de processos reais e globais.
+			filas.removerProcesso(processo.prioridade,processo.pid);
 
 		}
 	}
 }
 
+/*
+ * Escalona os processos de usuário.
+ */
 void escalonadorUsuario() {
 	Processo *processo = NULL;
 	std::list<Processo> *fila = NULL;
 
+	// Identifica a fila de maior prioridade não vazia.
 	if (!filas.processosUsuario.fila1.empty()) fila = &filas.processosUsuario.fila1;
 	else if (!filas.processosUsuario.fila2.empty()) fila = &filas.processosUsuario.fila2;
 	else if (!filas.processosUsuario.fila3.empty()) fila = &filas.processosUsuario.fila3;
-
-	//cout << "TEMPORIZADOR: " << temporizador << "\n";
-
 
 	if (fila) {
 		processo = &fila->front();
@@ -152,26 +155,44 @@ void escalonadorUsuario() {
 		}
 
 		// Aloca recursos
-
 		bool recursosAlocados = true;
-		// Verifica se o processo precisa de recursos e estes ainda não foram alocados para ele
-		if(processo->precisaRecursos() && ! gerenteRecursos.checaRecurso(processo->pid))
+
+		// Verifica se o processo precisa de recursos.
+		if (processo->precisaRecursos())
         {
-            if(processo->reqScanner)
-                recursosAlocados = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Scanner);
+			bool reqScanner = true, reqModem = true, reqImpressora = true, reqDisco = true;
 
-            if(processo->reqModem)
-                recursosAlocados = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Modem);
+            if(processo->reqScanner) {
+            	reqScanner = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Scanner);
+            	if (!reqScanner) filas.promoverProcessoComRecurso(processo->prioridade, gerenteRecursos, Recurso::Scanner);
+            }
 
-            if(processo->reqImpressora)
-                recursosAlocados = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Impressora);
+            if(processo->reqModem) {
+                reqModem = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Modem);
+                if (!reqModem) filas.promoverProcessoComRecurso(processo->prioridade, gerenteRecursos, Recurso::Modem);
+            }
 
-            if(processo->codDisco)
-                recursosAlocados = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Sata);
+            if(processo->reqImpressora) {
+                reqImpressora = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Impressora);
+                if (!reqImpressora)filas.promoverProcessoComRecurso(processo->prioridade, gerenteRecursos, Recurso::Impressora);
+            }
+            if(processo->reqDisco) {
+                reqDisco = gerenteRecursos.alocaRecurso(processo->pid, Recurso::Sata);
+                if (!reqDisco) filas.promoverProcessoComRecurso(processo->prioridade, gerenteRecursos, Recurso::Impressora);
+            }
+
+            if ((!reqDisco) || (!reqModem) || (!reqImpressora) || (!reqDisco)) recursosAlocados = false;
+            if (!recursosAlocados) {
+            	gerenteRecursos.liberaRecurso(processo->pid,Recurso::Impressora);
+            	gerenteRecursos.liberaRecurso(processo->pid,Recurso::Sata);
+            	gerenteRecursos.liberaRecurso(processo->pid,Recurso::Modem);
+            	gerenteRecursos.liberaRecurso(processo->pid,Recurso::Scanner);
+            }
         }
 
 		// Verifica novamente se memória pôde ser alocada e se os recursos necessários já foram alocados.
 		if (processo->offset != -1 && recursosAlocados) {
+
 			// Executa instrução.
 			executarCPU(*processo,QUANTUM);
 
@@ -188,7 +209,7 @@ void escalonadorUsuario() {
 			if (!processo->tempoProcessador) {
 				gerenteMemoria.liberaBloco(processo->pid);
 				gerenteRecursos.liberaTodos(processo->pid);
-				fila->pop_front();
+				filas.removerProcesso(processo->prioridade,processo->pid);
 			} else {
 				// Copia primeiro processo para o fim da fila.
 				fila->push_back(*processo);
@@ -219,29 +240,42 @@ void escalonadorUsuario() {
 }
 
 void executarCPU(Processo processo, int tempo) {
-		cout << "\n dispatcher => \n";
+		static int instruction = 1;
 
-		cout << "\t PID: " << processo.pid << '\n';
-		cout << "\t offset: " << processo.offset << '\n';
-		cout << "\t blocks: " << processo.blocoMem << '\n';
-		cout << "\t priority: " << processo.prioridade << '\n';
-		cout << "\t time: " << processo.tempoProcessador << '\n';
-		cout << "\t printers: " << processo.reqImpressora << '\n';
-		cout << "\t scanners: " << processo.reqScanner << '\n';
-		cout << "\t modems: " << processo.reqModem << '\n';
-		cout << "\t drives: " << processo.codDisco << '\n';
-		cout << "\n";
+		// Verifica se processo que está sendo executado deve continuar.
+		if (cpu != processo.pid) {
 
-		cout << "Process " << processo.pid << "\n";
-		cout << "P" << processo.pid << " STARTED \n";
+			// Caso seja outro processo, interrompe o anterior e começa o novo.
+			if (cpu != -1) cout << "P" << cpu << " return SIGINT\n";
+
+			//cout << "\nSYSTEM TIME: " << temporizador;
+
+			cout << "\n dispatcher => \n";
+
+			cout << "\t PID: " << processo.pid << '\n';
+			cout << "\t offset: " << processo.offset << '\n';
+			cout << "\t blocks: " << processo.blocoMem << '\n';
+			cout << "\t priority: " << processo.prioridade << '\n';
+			cout << "\t time: " << processo.tempoProcessador << '\n';
+			cout << "\t printers: " << processo.reqImpressora << '\n';
+			cout << "\t scanners: " << processo.reqScanner << '\n';
+			cout << "\t modems: " << processo.reqModem << '\n';
+			cout << "\t drives: " << processo.reqDisco << '\n';
+			cout << "\n";
+
+			cout << "Process " << processo.pid << "\n";
+			cout << "P" << processo.pid << " STARTED \n";
+
+			instruction = 1;
+		}
 
 		for (int it = 1; it < tempo+1 ; it++) {
-			cout << "P" << processo.pid << " instruction " << it << "\n";
+			cout << "P" << processo.pid << " instruction " << instruction++ << "\n";
 			filas.age();
 			//sleep(1);
 		}
 
-		cout << "SIGINT" << "\n";
+		cpu = processo.pid;
 }
 
 std::list<Processo> lerArquivo(ifstream & arquivo) {
@@ -257,34 +291,19 @@ std::list<Processo> lerArquivo(ifstream & arquivo) {
 		std::getline(arquivo,linha);
 
 		if (!linha.empty()) {
-			Processo processo;
-			char *dados = std::strtok(&linha[0], ", ");
+			int tempoInicializacao, prioridade, tempoProcessador, blocoMem;
+			int reqImpressora, reqScanner, reqModem, reqDisco;
+			int idade = 0, offset = -1;
 
-			int it = 0;
+			sscanf(linha.c_str(),"%d, %d, %d, %d, %d, %d, %d, %d\n",
+					&tempoInicializacao, &prioridade, &tempoProcessador,
+					&blocoMem, &reqImpressora, &reqScanner, &reqModem, &reqDisco);
 
-
-			// Coloca as informações no processo.
-			processo.pid = pid++;
-			processo.offset = -1;
-			processo.idade = 0;
-			while (dados != NULL) {
-				switch (it) {
-					case 0: processo.tempoInicializacao = atoi(dados); break;
-					case 1: processo.prioridade = atoi(dados); break;
-					case 2: processo.tempoProcessador = atoi(dados); break;
-					case 3: processo. blocoMem = atoi(dados); break;
-					case 4: processo.reqImpressora = atoi(dados); break;
-					case 5: processo.reqScanner = atoi(dados); break;
-					case 6: processo.reqModem = atoi(dados); break;
-					case 7: processo.codDisco = atoi(dados); break;
-				}
-				dados = std::strtok(NULL, ", ");
-				it++;
-			}
-
+			Processo processo(tempoInicializacao, prioridade, tempoProcessador, blocoMem,
+			reqImpressora, reqScanner, reqModem, reqDisco, idade, offset, pid++);
 
 			if ((!processo.prioridade) &&
-					((processo.codDisco != 0) || (processo.reqImpressora != 0) ||
+					((processo.reqDisco != 0) || (processo.reqImpressora != 0) ||
 					(processo.reqModem != 0) || (processo.reqScanner != 0))) {
 				cout << "\nRequisicao de recurso para processo real. Isso nao e permitido. Requisicao"
 						" sera ignorada.\n";
@@ -292,7 +311,7 @@ std::list<Processo> lerArquivo(ifstream & arquivo) {
 				processo.reqImpressora = 0;
 				processo.reqModem = 0;
 				processo.reqScanner = 0;
-				processo.codDisco = 0;
+				processo.reqDisco = 0;
 			}
 
 			if ((processo.prioridade < 0) || (processo.prioridade > 3)) {
@@ -304,16 +323,11 @@ std::list<Processo> lerArquivo(ifstream & arquivo) {
 				cout <<"\nProcesso tenta alocar mais memória do que o permitido para a sua prioridade."
 						"Os processos de usuario devem estar na faixa 0-960 e os de tempo real na faixa 0-64."
 						"Processo sera ignorado.\n";
-			} else if ((processo.codDisco < 0) || (processo.codDisco > 2) ||
-						(processo.reqImpressora < 0) || (processo.reqImpressora > 2) ||
+			} else if ((processo.reqDisco < 0) || (processo.reqDisco > 1) ||
+						(processo.reqImpressora < 0) || (processo.reqImpressora > 1) ||
 						(processo.reqModem < 0) || (processo.reqModem > 1) ||
 						(processo.reqScanner < 0) || (processo.reqScanner > 1)) {
-				cout << "\nRequisicao de recurso nao existente. Os recursos estao na faixa:"
-						"\n SATA: 0 - 2"
-						"\n Impressora: 0 - 1"
-						"\n Modem: 0 - 1"
-						"\n Scanner: 0 - 1"
-						"\n Processo sera ignorado.\n\n";
+				cout << "\nNumero invalido para requisicao de recurso. Requisicao deve ser 0 ou 1.\n\n";
 
 			} else {
 				cliente[processo.tempoInicializacao].push_back(processo);
@@ -325,27 +339,3 @@ std::list<Processo> lerArquivo(ifstream & arquivo) {
 
 	return processos;
 }
-
-void imprimirProcesso (Processo processo) {
-	cout << "PID: " << processo.pid << '\n';
-	cout << "offset: " << processo.offset << '\n';
-	cout << "blocks: " << processo.blocoMem << '\n';
-	cout << "priority: " << processo.prioridade << '\n';
-	cout << "time: " << processo.tempoProcessador << '\n';
-	cout << "printers: " << processo.reqImpressora << '\n';
-	cout << "scanners: " << processo.reqScanner << '\n';
-	cout << "modems: " << processo.reqModem << '\n';
-	cout << "drives: " << processo.codDisco << '\n';
-}
-
-void imprimirProcessos(std::list<Processo> processos) {
-	for (std::list<Processo>::iterator it = processos.begin(); it != processos.end(); it++) {
-		Processo processo = *it;
-		cout << '\n';
-
-		imprimirProcesso(processo);
-
-		cout << '\n';
-	}
-}
-

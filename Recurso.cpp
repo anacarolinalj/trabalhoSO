@@ -21,19 +21,24 @@ Recurso::~Recurso() {
 	// TODO Auto-generated destructor stub
 }
 
+
 bool Recurso::alocaRecurso(int id, TipoRecurso tipo)
 {
     switch(tipo)
     {
     case Scanner:
-        if(scanner == -1)
+    	if (scanner == id) return true;
+        if (scanner == -1)
         {
             scanner = id;
             return true;
         }
+
         return false;
 
     case Impressora:
+    	if ((impressora[0] == id) || (impressora[1] == id)) return true;
+
         if(impressora[0] == -1)
         {
             impressora[0] = id;
@@ -48,6 +53,8 @@ bool Recurso::alocaRecurso(int id, TipoRecurso tipo)
         return false;
 
     case Modem:
+    	if (modem == id) return true;
+
         if(modem == -1)
         {
             modem = id;
@@ -55,6 +62,8 @@ bool Recurso::alocaRecurso(int id, TipoRecurso tipo)
         }
         return false;
     case Sata:
+    	if ((sata[0] == id) || (sata[1] == id)) return true;
+
         if(sata[0] == -1)
         {
             sata[0] = id;

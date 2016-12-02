@@ -11,6 +11,11 @@
 class Recurso {
 public:
     enum TipoRecurso{Scanner, Impressora, Modem, Sata};
+    int scanner;
+    int impressora[2];
+    int modem;
+    int sata[2];
+
 	Recurso();
 	virtual ~Recurso();
 
@@ -25,11 +30,6 @@ public:
     // Libera todos os recursos alocados para um processo
     void liberaTodos(int id);
 
-private:
-    int scanner;
-    int impressora[2];
-    int modem;
-    int sata[2];
 };
 
 #endif /* RECURSO_H_ */

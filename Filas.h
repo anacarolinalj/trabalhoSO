@@ -10,6 +10,7 @@
 
 #include <list>
 #include "Processo.h"
+#include "Recurso.h"
 
 #define MEMORY_REAL 64
 
@@ -22,13 +23,16 @@ public:
 
 class Filas {
 public:
+	std::list<Processo> filaGlobal;
 	std::list<Processo> processosReais;
 	FilaProcessosUsuario processosUsuario;
 	Filas();
 	virtual ~Filas();
 
-	void adicionarFilas(Processo processo, std::list<Processo> *processos);
+	void adicionarFilas(Processo processo);
+	void removerProcesso(int prioridade, int pid);
 	void promoverProcessos();
+	void promoverProcessoComRecurso(int prioridade, Recurso gerenteRecursos, Recurso::TipoRecurso tipo);
 	void age();
 };
 

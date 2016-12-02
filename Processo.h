@@ -9,6 +9,7 @@
 #ifndef PROCESSO_H_
 #define PROCESSO_H_
 
+
 class Processo {
 public:
 	int pid;
@@ -21,8 +22,10 @@ public:
 	int reqImpressora;
 	int reqScanner;
 	int reqModem;
-	int codDisco;
-	Processo();
+	int reqDisco;
+	Processo(int tempoInicializacao, int prioridade, int tempoProcessador,
+			 int  blocoMem, int  reqImpressora, int reqScanner, int reqModem,
+			 int reqDisco, int idade, int offset, int  pid);
 	virtual ~Processo();
 
 

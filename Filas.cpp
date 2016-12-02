@@ -22,6 +22,129 @@ Filas::~Filas() {
 using namespace std;
 #include <iostream>
 
+void Filas::promoverProcessoComRecurso(int prioridade, Recurso gerenteRecursos, Recurso::TipoRecurso tipo) {
+	Processo *processo;
+	int prioridadeRecurso = -1;
+	int pidRecurso;
+
+	// Descobre a qual fila o processo que possui o recurso pertence.
+	for (std::list<Processo>::iterator it = filaGlobal.begin(); it != filaGlobal.end(); it++) {
+		switch (tipo) {
+			case Recurso::Scanner:
+				if (gerenteRecursos.scanner == it->pid) {
+					prioridadeRecurso = it->prioridade;
+					pidRecurso = it->pid;
+					processo = &(*it);
+				}
+				break;
+
+			case Recurso::Impressora:
+				if (gerenteRecursos.impressora[0] == it->pid) {
+					if ((prioridadeRecurso == -1) || (prioridadeRecurso > it->prioridade)) {
+						prioridadeRecurso = it->prioridade;
+						pidRecurso = it->pid;
+						processo = &(*it);
+					}
+
+				} else if (gerenteRecursos.impressora[1] == it->pid) {
+					if ((prioridadeRecurso == -1) || (prioridadeRecurso > it->prioridade)) {
+						prioridadeRecurso = it->prioridade;
+						pidRecurso = it->pid;
+						processo = &(*it);
+					}
+				}
+				break;
+			case Recurso::Modem:
+				if (gerenteRecursos.modem == it->pid) {
+					prioridadeRecurso = it->prioridade;
+					pidRecurso = it->pid;
+					processo = &(*it);
+				}
+				break;
+			case Recurso::Sata:
+				if (gerenteRecursos.impressora[0] == it->pid) {
+					if ((prioridadeRecurso == -1) || (prioridadeRecurso > it->prioridade)) {
+						prioridadeRecurso = it->prioridade;
+						pidRecurso = it->pid;
+						processo = &(*it);
+					}
+
+				} else if (gerenteRecursos.impressora[1] == it->pid) {
+					if ((prioridadeRecurso == -1) || (prioridadeRecurso > it->prioridade)) {
+						prioridadeRecurso = it->prioridade;
+						pidRecurso = it->pid;
+						processo = &(*it);
+					}
+				}
+				break;
+		}
+	}
+
+	// Caso a prioridade do processo que tem posse do recurso seja igual a
+	//do processo que está solicitando o recurso não haverá promoção.
+	if (prioridadeRecurso == prioridade) return;
+
+	list<Processo> *filaOriginal, *filaNova;
+
+	switch (prioridadeRecurso) {
+		case 0: filaOriginal = &processosReais ; break;
+		case 1: filaOriginal = &processosUsuario.fila1; break;
+		case 2: filaOriginal = &processosUsuario.fila2; break;
+		case 3: filaOriginal = &processosUsuario.fila3; break;
+	}
+
+	switch (prioridade) {
+			case 0: filaNova = &processosReais ; break;
+			case 1: filaNova = &processosUsuario.fila1; break;
+			case 2: filaNova = &processosUsuario.fila2; break;
+			case 3: filaNova = &processosUsuario.fila3; break;
+	}
+
+	// Processo é movido para a nova fila.
+	for (std::list<Processo>::iterator it = filaOriginal->begin(); it != filaOriginal->end(); it++) {
+			if (it->pid == pidRecurso) {
+				// Prioridade do processo é alterada na fila global.
+				processo->prioridade = prioridade;
+				it->prioridade = prioridade;
+
+				// Processo é salvo na nova fila.
+				filaNova->push_back(*it);
+
+				// Processo retirado da fila antiga.
+				filaOriginal->erase(it);
+				return;
+			}
+	}
+}
+
+void Filas::removerProcesso(int prioridade, int pid) {
+	list<Processo> *fila;
+
+	switch (prioridade) {
+		case 0: fila = &processosReais ; break;
+		case 1: fila = &processosUsuario.fila1; break;
+		case 2: fila = &processosUsuario.fila2; break;
+		case 3: fila = &processosUsuario.fila3; break;
+	}
+
+	// Apaga processo da sua fila.
+	for (std::list<Processo>::iterator it = fila->begin(); it != fila->end(); it++) {
+		if (it->pid == pid) {
+			fila->erase(it);
+			break;
+		}
+	}
+
+	// Apaga processo da fila global.
+	for (std::list<Processo>::iterator it = filaGlobal.begin(); it != filaGlobal.end(); it++) {
+		if (it->pid == pid) {
+			fila->erase(it);
+			break;
+		}
+	}
+
+}
+
 void Filas::promoverProcessos() {
 	if (!processosUsuario.fila1.empty()) {
 		for (std::list<Processo>::iterator it = processosUsuario.fila1.begin(); it != processosUsuario.fila1.end(); it++) {
@@ -85,8 +208,8 @@ void Filas::age() {
 	}
 }
 
-void Filas::adicionarFilas(Processo processo, std::list<Processo> *processos) {
-	processos->push_back(processo);
+void Filas::adicionarFilas(Processo processo) {
+	filaGlobal.push_back(processo);
 	switch (processo.prioridade) {
 			case 0: processosReais.push_back(processo) ; break;
 			case 1: processosUsuario.fila1.push_back(processo); break;
